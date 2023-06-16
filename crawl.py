@@ -235,8 +235,8 @@ app = Flask(__name__)
 api = Api(app)
 
 class Main(Resource):
-    def get(self, size, url):
-        return {"Success":True, "emails":search_url(url)}
+    def get(self, url):
+        return {"Success":True, "leads":organize(url)}
 
 api.add_resource(Main, "/search_url/<path:url>")
 
