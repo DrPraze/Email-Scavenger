@@ -7,9 +7,8 @@ import re
 import mimetypes
 from validate_email_address import validate_email
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_restful import Api, Resource
-import json
 
 def bad_request(message):
     response = {'message': message}
@@ -220,14 +219,13 @@ def isValidEmail(email):return validate_email(email)
 
 def organize(url):
     leads = {}
+    # emails = ["praisejames011@gmail.com", "hello@slakenet.com.ng", "slakenetofficial@gmail.com"]
     emails = search_url(url)
     for i in emails:
         if isValidEmail(i):
-            z = json.loads(leads)
-            z.update({f'{i}':{"Verified":True}})
+            leads[i] = {"status":"Verified"};
         else:
-            z = json.loads(leads)
-            z.update({f'{i}':{"Verified":False}})
+            leads[i] = {"status":"Invalid"};
     return leads
 
 
@@ -236,7 +234,9 @@ api = Api(app)
 
 class Main(Resource):
     def get(self, url):
-        return {"Success":True, "leads":organize(url)}
+        result = organize(url)
+        # return {"success":"true", "leads":jsonify(result)}
+        return jsonify({"success":"true", "leads":result})
 
 api.add_resource(Main, "/search_url/<path:url>")
 
