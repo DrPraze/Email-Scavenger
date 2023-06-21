@@ -9,6 +9,7 @@ from validate_email_address import validate_email
 
 from flask import Flask, jsonify
 from flask_restful import Api, Resource
+import importlib
 
 def bad_request(message):
     response = {'message': message}
@@ -228,17 +229,27 @@ def organize(url):
             leads[i] = {"status":"Invalid"};
     return leads
 
+def scrapeGoogleMap():
+    task = "scraper"
+    Task = importlib.import_module(task).Task
+    t = Task()
+    t.begin_task()
 
 app = Flask(__name__)
 api = Api(app)
 
-class Main(Resource):
+class SearchURL(Resource):
     def get(self, url):
         result = organize(url)
-        # return {"success":"true", "leads":jsonify(result)}
         return jsonify({"success":"true", "leads":result})
 
-api.add_resource(Main, "/search_url/<path:url>")
+class GoogleMap():
+    def get(self, queries):
+        result = scrapeGoogleMap()
+        return jsonify({"success":"true", "leads":result})
+
+api.add_resource(SearchURL, "/search_url/<path:url>")
+# Add google map scraping to resource once ready
 
 if __name__ == '__main__':
     app.run(debug=True)
