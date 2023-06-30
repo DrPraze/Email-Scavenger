@@ -7,7 +7,7 @@ import re
 import mimetypes
 from validate_email_address import validate_email
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import importlib
 
@@ -131,7 +131,8 @@ def send_email_leads(room, email_leads):socketio.emit('email_leads', email_leads
 @app.route('/search', methods=['POST'])
 def search():
   query = request.json['query']
-  search_url(query)
+  room = request.json['room']
+  search_url(query, room)
   return jsonify(emails)
 
 if __name__=='__main__':
