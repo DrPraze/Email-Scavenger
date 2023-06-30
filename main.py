@@ -8,12 +8,11 @@ import mimetypes
 from validate_email_address import validate_email
 
 from flask import Flask, jsonify
-from flask_restful import Api, Resource
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import importlib
 
 
-
-def search_url(user_url):
+def search_url(user_url, room):
   # user_url = "https://slakenet.com.ng/"
   urls = deque([user_url])
 
@@ -56,6 +55,15 @@ def search_url(user_url):
             new_emails = set(re.findall(r'[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+', response.text, re.I))
             emails.update(new_emails)
 
+            #share retreived email on live feed
+            leads = {}
+            for item in emails:
+              if validate_email(item):
+                leads[item] = {"status":"Verified"};
+              else:
+                leads[item] = {"status":"Invalid"};
+            send_email_leads(room, leads)
+
             soup = BeautifulSoup(response.text, features="lxml")
 
             for anchor in soup.find_all("a"):
@@ -66,8 +74,8 @@ def search_url(user_url):
                 link = path + link
               if not link in urls and not link in scraped_urls:
                 urls.append(link)
-        except:
-          pass
+        except Exception as e:
+          print(f"An error occured{e}");
   except KeyboardInterrupt:
     print('[-] Closing!')
 
@@ -76,19 +84,6 @@ def search_url(user_url):
     # return mail
     return emails
 
-def isValidEmail(email):return validate_email(email)
-
-def organize(url):
-    leads = {}
-    # emails = ["praisejames011@gmail.com", "hello@slakenet.com.ng", "slakenetofficial@gmail.com"]
-    emails = search_url(url)
-    for i in emails:
-        if isValidEmail(i):
-            leads[i] = {"status":"Verified"};
-        else:
-            leads[i] = {"status":"Invalid"};
-    return leads
-
 def scrapeGoogleMap():
     task = "scraper"
     Task = importlib.import_module(task).Task
@@ -96,20 +91,42 @@ def scrapeGoogleMap():
     t.begin_task()
 
 app = Flask(__name__)
-api = Api(app)
+socketio = SocketIO(app)
 
-class SearchURL(Resource):
-    def get(self, url):
-        result = organize(url)
-        return jsonify({"success":"true", "leads":result})
+@socketio.on('connect')
+def handle_connect():print("A client is connected.")
 
-class GoogleMap():
-    def get(self, queries):
-        result = scrapeGoogleMap()
-        return jsonify({"success":"true", "leads":result})
+@socketio.on('disconnect')
+def handle_disconnect():print("A client is disconnected.")
 
-api.add_resource(SearchURL, "/search_url/<path:url>")
-# Add google map scraping to resource once ready
+@socketio.on('join_room')
+def handle_join_room(data):
+  room = data['room']
+  join_room(room)
+  print(f"A client joined room: {room}")
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@socketio.on('leave_room')
+def handle_leave_room(data):
+  room = data['room']
+  leave_room(room)
+  print(f"A client left room: {room}")
+
+@socketio.on('search')
+def handle_search(data):
+  query = data['query']
+  room = data['room']
+  search_type = data['searchType']
+
+  if search_type == "google_maps":
+    # email_leads = google_maps_search(query)
+    pass
+  elif search_type == 'url':
+    search_url(query)
+  else:
+    # email_leads = []
+    pass
+
+def send_email_leads(room, email_leads):socketio.emit('email_leads', email_leads, room=room)
+
+if __name__=='__main__':
+  socketio.run(app, host='0.0.0.0', port=5000)
