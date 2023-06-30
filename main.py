@@ -84,11 +84,11 @@ def search_url(user_url, room):
     # return mail
     return emails
 
-def scrapeGoogleMap():
-    task = "scraper"
-    Task = importlib.import_module(task).Task
-    t = Task()
-    t.begin_task()
+# def scrapeGoogleMap():
+#     task = "scraper"
+#     Task = importlib.import_module(task).Task
+#     t = Task()
+#     t.begin_task()
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -127,6 +127,12 @@ def handle_search(data):
     pass
 
 def send_email_leads(room, email_leads):socketio.emit('email_leads', email_leads, room=room)
+
+@app.route('/search', methods=['POST'])
+def search():
+  query = request.json['query']
+  search_url(query)
+  return jsonify(emails)
 
 if __name__=='__main__':
   socketio.run(app, host='0.0.0.0', port=5000)
