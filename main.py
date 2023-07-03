@@ -10,7 +10,7 @@ import socket, threading
 import importlib
 
 
-def search_url(user_url):
+def search_url(user_url, client_socket):
   # user_url = "https://slakenet.com.ng/"
   urls = deque([user_url])
 
@@ -60,7 +60,7 @@ def search_url(user_url):
                 leads[item] = {"status":"Verified"};
               else:
                 leads[item] = {"status":"Invalid"};
-            send_email_leads(room, leads)
+            client_socket.send(str(leads).encode('utf-8'))
 
             soup = BeautifulSoup(response.text, features="lxml")
 
@@ -96,11 +96,12 @@ def handle_client(client_socket):
         if not data:
             break
 
-        results = send_url(data)
+        # Process the data using the function
+        # results = process_message(data)
 
-        # Send each result back to the client
-        for result in emails:
-            client_socket.send(result.encode('utf-8'))
+        # Start a new thread to send the results to the client
+        send_thread = threading.Thread(target=search_url, args=(data, client_socket))
+        send_thread.start()
 
     client_socket.close()
 
@@ -124,3 +125,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+      
