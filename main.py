@@ -6,13 +6,11 @@ from collections import deque
 import re
 import mimetypes
 from validate_email_address import validate_email
-
-from flask import Flask, jsonify, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
+import socket, threading
 import importlib
 
 
-def search_url(user_url, room):
+def search_url(user_url):
   # user_url = "https://slakenet.com.ng/"
   urls = deque([user_url])
 
@@ -90,50 +88,39 @@ def search_url(user_url, room):
 #     t = Task()
 #     t.begin_task()
 
-app = Flask(__name__)
-socketio = SocketIO(app)
+# Function to handle each client connection
+def handle_client(client_socket):
+    while True:
+        # Receive data from the client
+        data = client_socket.recv(1024).decode('utf-8')
+        if not data:
+            break
 
-@socketio.on('connect')
-def handle_connect():print("A client is connected.")
+        results = send_url(data)
 
-@socketio.on('disconnect')
-def handle_disconnect():print("A client is disconnected.")
+        # Send each result back to the client
+        for result in emails:
+            client_socket.send(result.encode('utf-8'))
 
-@socketio.on('join_room')
-def handle_join_room(data):
-  room = data['room']
-  join_room(room)
-  print(f"A client joined room: {room}")
+    client_socket.close()
 
-@socketio.on('leave_room')
-def handle_leave_room(data):
-  room = data['room']
-  leave_room(room)
-  print(f"A client left room: {room}")
+# Main function to start the server
+def main():
+    host = '127.0.0.1'
+    port = 12345
 
-@socketio.on('search')
-def handle_search(data):
-  query = data['query']
-  room = data['room']
-  search_type = data['searchType']
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)
+    print(f"[*] Listening on {host}:{port}")
 
-  if search_type == "google_maps":
-    # email_leads = google_maps_search(query)
-    pass
-  elif search_type == 'url':
-    search_url(query)
-  else:
-    # email_leads = []
-    pass
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"[*] Accepted connection from {addr[0]}:{addr[1]}")
+        
+        # Create a new thread to handle the client
+        client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+        client_thread.start()
 
-def send_email_leads(room, email_leads):socketio.emit('email_leads', email_leads, room=room)
-
-@app.route('/search', methods=['POST'])
-def search():
-  query = request.json['query']
-  room = request.json['room']
-  search_url(query, room)
-  return jsonify(emails)
-
-if __name__=='__main__':
-  socketio.run(app, host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    main()
