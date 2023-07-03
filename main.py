@@ -6,9 +6,7 @@ from collections import deque
 import re
 import mimetypes
 from validate_email_address import validate_email
-
-from flask import Flask, jsonify, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
+import sockets
 import importlib
 
 
@@ -89,51 +87,3 @@ def search_url(user_url, room):
 #     Task = importlib.import_module(task).Task
 #     t = Task()
 #     t.begin_task()
-
-app = Flask(__name__)
-socketio = SocketIO(app)
-
-@socketio.on('connect')
-def handle_connect():print("A client is connected.")
-
-@socketio.on('disconnect')
-def handle_disconnect():print("A client is disconnected.")
-
-@socketio.on('join_room')
-def handle_join_room(data):
-  room = data['room']
-  join_room(room)
-  print(f"A client joined room: {room}")
-
-@socketio.on('leave_room')
-def handle_leave_room(data):
-  room = data['room']
-  leave_room(room)
-  print(f"A client left room: {room}")
-
-@socketio.on('search')
-def handle_search(data):
-  query = data['query']
-  room = data['room']
-  search_type = data['searchType']
-
-  if search_type == "google_maps":
-    # email_leads = google_maps_search(query)
-    pass
-  elif search_type == 'url':
-    search_url(query)
-  else:
-    # email_leads = []
-    pass
-
-def send_email_leads(room, email_leads):socketio.emit('email_leads', email_leads, room=room)
-
-@app.route('/search', methods=['POST'])
-def search():
-  query = request.json['query']
-  room = request.json['room']
-  search_url(query, room)
-  return jsonify(emails)
-
-if __name__=='__main__':
-  socketio.run(app, host='0.0.0.0', port=5000)
