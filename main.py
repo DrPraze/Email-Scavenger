@@ -6,11 +6,11 @@ from collections import deque
 import re
 import mimetypes
 from validate_email_address import validate_email
-import sockets
+import socket, threading
 import importlib
 
 
-def search_url(user_url, room):
+def search_url(user_url):
   # user_url = "https://slakenet.com.ng/"
   urls = deque([user_url])
 
@@ -87,3 +87,40 @@ def search_url(user_url, room):
 #     Task = importlib.import_module(task).Task
 #     t = Task()
 #     t.begin_task()
+
+# Function to handle each client connection
+def handle_client(client_socket):
+    while True:
+        # Receive data from the client
+        data = client_socket.recv(1024).decode('utf-8')
+        if not data:
+            break
+
+        results = send_url(data)
+
+        # Send each result back to the client
+        for result in emails:
+            client_socket.send(result.encode('utf-8'))
+
+    client_socket.close()
+
+# Main function to start the server
+def main():
+    host = '127.0.0.1'
+    port = 12345
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)
+    print(f"[*] Listening on {host}:{port}")
+
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"[*] Accepted connection from {addr[0]}:{addr[1]}")
+        
+        # Create a new thread to handle the client
+        client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+        client_thread.start()
+
+if __name__ == "__main__":
+    main()
