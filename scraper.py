@@ -70,7 +70,7 @@ class Task(BaseTask):
     GET_FIRST_PAGE = False
 
     queries = [
-        "restaurants in jhajjar",
+        "restaurants in Nigeria",
     ]
     # queries = querylist
     
